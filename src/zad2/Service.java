@@ -42,7 +42,7 @@ public class Service {
     public Double getNBPRate() {
         if (this.currencyCode.equals("PLN")) return 1.0;
         JSONArray data = new JSONObject(readJsonFromUrl("http://api.nbp.pl/api/exchangerates/rates/a/" + this.currencyCode + "/?format=json")).getJSONArray("rates");
-        JSONObject rate = new JSONObject(data.getJSONObject(0));
+        JSONObject rate = new JSONObject(data.getJSONObject(0).toString());
         return rate.getDouble("mid");
     }
 
