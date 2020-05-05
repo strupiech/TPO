@@ -18,9 +18,7 @@ public class ClientTask extends FutureTask<String> {
                 if (showResult)
                     System.out.println(result);
             }
-            String log = client.send("bye and log transfer");
-            System.out.println(log);
-            return log;
+            return client.send("bye and log transfer");
         });
     }
 
