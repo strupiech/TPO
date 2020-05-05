@@ -1,82 +1,107 @@
 /**
- *
- *  @author Strupiechowski Mateusz S18747
- *
+ * @author Strupiechowski Mateusz S18747
  */
 
 package S_PASSTIME_SERVER1;
 
-
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.nio.ByteBuffer;
-import java.nio.channels.SelectionKey;
-import java.nio.channels.Selector;
-import java.nio.channels.ServerSocketChannel;
-import java.nio.channels.SocketChannel;
+import java.net.Socket;
+import java.nio.channels.*;
 import java.util.Iterator;
 import java.util.Set;
 
 public class Server {
 
-    String host;
-    int port;
-    ServerLog serverLog;
-    volatile boolean isRunning;
+    private ServerSocketChannel serverChannel = null;
+    private Selector selector = null;
+    boolean isServerRunning = true;
+    private ServerLog serverLog;
 
     public Server(String host, int port) {
-        this.host = host;
-        this.port = port;
+        try {
+            serverChannel = ServerSocketChannel.open();
+            serverChannel.configureBlocking(false);
+            serverChannel.socket().bind(new InetSocketAddress(host, port));
+
+            selector = Selector.open();
+
+            serverChannel.register(selector, SelectionKey.OP_ACCEPT);
+        } catch (IOException e) {
+            e.printStackTrace();
+            System.exit(1);
+        }
         this.serverLog = new ServerLog();
     }
 
     public void startServer() throws IOException {
-        isRunning = true;
-        Selector selector = Selector.open();
-        ServerSocketChannel serverSocketChannel = ServerSocketChannel.open();
-        serverSocketChannel.bind(new InetSocketAddress(host, port));
-        serverSocketChannel.configureBlocking(false);
-        serverSocketChannel.register(selector, SelectionKey.OP_ACCEPT);
+        System.out.println("Server started and ready");
 
-        while(isRunning){
-            selector.select();
-            Set<SelectionKey> selectedKeys = selector.selectedKeys();
-            Iterator<SelectionKey> iterator = selectedKeys.iterator();
-            ByteBuffer buffer = ByteBuffer.allocate(512);
-            while(iterator.hasNext()){
-                SelectionKey key = iterator.next();
+        while (isServerRunning) {
+            try {
+                selector.select();
 
-                if (key.isAcceptable())
-                    register(selector, serverSocketChannel);
+                Set keys = selector.selectedKeys();
+                Iterator iterator = keys.iterator();
+                while (iterator.hasNext()) {
 
-                if (key.isReadable())
-                    answerWithEcho(buffer, key);
+                    SelectionKey key = (SelectionKey) iterator.next();
+                    iterator.remove();
+
+                    if (key.isAcceptable()) {
+                        SocketChannel channel = serverChannel.accept();
+                        channel.configureBlocking(false);
+                        channel.register(selector, SelectionKey.OP_READ);
+                        System.out.println("polaczony klient");
+                        continue;
+                    }
+
+                    if (key.isReadable()) {
+                        SocketChannel channel = (SocketChannel) key.channel();
+                        //TODO OBSLUGA REQUESTU
+                        continue;
+                    }
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+                continue;
             }
         }
     }
 
-    private void register(Selector selector, ServerSocketChannel serverSocketChannel)
-            throws IOException {
-        SocketChannel client = serverSocketChannel.accept();
-        client.configureBlocking(false);
-        client.register(selector, SelectionKey.OP_READ);
-    }
-
-    private static void answerWithEcho(ByteBuffer buffer, SelectionKey key)
-            throws IOException {
-
-        SocketChannel client = (SocketChannel) key.channel();
-        client.read(buffer);
-
-        System.out.println("request: " + new String(buffer.array()).trim());
-
-        buffer.flip();
-        client.write(buffer);
-        buffer.clear();
-    }
-
     public void stopServer() {
-        isRunning = false;
+        if (this.serverChannel != null && this.serverChannel.isOpen()) {
+            try {
+                isServerRunning = false;
+                this.serverChannel.close();
+            } catch (IOException e) {
+                System.out.println("Exception while closing server socket");
+                e.printStackTrace();
+            }
+        }
+
+        try {
+            for (SelectionKey key : this.selector.keys()) {
+                SelectableChannel channel = key.channel();
+
+                if (channel instanceof SocketChannel) {
+                    SocketChannel socketChannel = (SocketChannel) channel;
+
+                    try {
+                        socketChannel.close();
+                    } catch (IOException e) {
+                        System.out.println("Exception while closing client socket");
+                        e.printStackTrace();
+                    }
+
+                    key.cancel();
+                }
+            }
+            selector.close();
+        } catch (Exception ex) {
+            System.out.println("Exception while closing selector");
+            ex.printStackTrace();
+        }
     }
 
     public String getServerLog() {

@@ -1,34 +1,30 @@
 /**
- *
- *  @author Strupiechowski Mateusz S18747
- *
+ * @author Strupiechowski Mateusz S18747
  */
 
 package S_PASSTIME_SERVER1;
 
-
-import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 
-public class ClientTask implements Runnable{
+public class ClientTask implements Runnable {
 
     Client client;
     List<String> requestList;
     boolean showResult;
 
-    private ClientTask(Client client, List<String> requestList, boolean showResult){
+    private ClientTask(Client client, List<String> requestList, boolean showResult) {
         this.client = client;
         this.requestList = requestList;
         this.showResult = showResult;
     }
 
     public static ClientTask create(Client c, List<String> reqList, boolean showRes) {
-        ClientTask clientTask = new ClientTask(c, reqList, showRes);
-
-        return clientTask;
+        return new ClientTask(c, reqList, showRes);
     }
 
-    public String get() {
+    public String get()
+            throws InterruptedException, ExecutionException {
         return null;
     }
 
