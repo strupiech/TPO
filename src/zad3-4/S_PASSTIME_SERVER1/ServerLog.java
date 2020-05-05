@@ -1,34 +1,60 @@
 package S_PASSTIME_SERVER1;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.*;
 
 public class ServerLog {
 
-    Map<String, String> clientsLog;
+    private List<String> serverLog;
+    private Map<Integer, String> portsClients;
+    private Map<Integer, List<String>> clientsLog;
 
     public ServerLog() {
+        serverLog = new ArrayList<>();
+        portsClients = new HashMap<>();
         clientsLog = new HashMap<>();
     }
 
-    public void add(String clientId, String clientLog) {
-        if (!clientsLog.containsKey(clientId))
-            clientsLog.put(clientId, clientLog);
-        else {
-            String previousLog = clientsLog.get(clientId);
-            previousLog += "\n" + clientLog;
-            clientsLog.put(clientId, previousLog);
-        }
+    public void addClient(Integer clientChannelPort, String id) {
+        portsClients.put(clientChannelPort, id);
+    }
+
+    public void addToServerLog(Integer clientChannelPort, String activity) {
+        serverLog.add(portsClients.get(clientChannelPort) + " " + activity + "\n");
+    }
+
+    public void addToClientLog(Integer clientChannelPort, String clientLog) {
+        if (clientLog.equals("logged in")) {
+            clientsLog.put(clientChannelPort, new ArrayList<>());
+            clientsLog.get(clientChannelPort).add("=== " + portsClients.get(clientChannelPort) + " log start ===\n" + clientLog + "\n");
+        } else if (clientLog.equals("logged out"))
+            clientsLog.get(clientChannelPort).add(clientLog + "\n=== " + portsClients.get(clientChannelPort) + " log end ===\n");
+        else
+            clientsLog.get(clientChannelPort).add(clientLog + "\n");
     }
 
     public String get() {
-        StringBuilder serverLog = new StringBuilder();
-        clientsLog.forEach((id, clientLog) -> serverLog.append(id).append("\n").append(clientLog));
-        return serverLog.toString();
+        return get(serverLog);
     }
 
-    public String get(String clientId) {
-        return clientsLog.get(clientId);
+    public String get(Integer clientChannelPort) {
+        return get(clientsLog.get(clientChannelPort));
+    }
+
+    public String get(List<String> logs) {
+        StringBuilder log = new StringBuilder();
+        for (String singleLog : logs) {
+            log.append(singleLog);
+        }
+        return log.toString();
+    }
+
+    public String getTime() {
+        DateFormat dateFormat = new SimpleDateFormat("HH:mm:ss.SSS");
+        Calendar cal = Calendar.getInstance();
+
+        return dateFormat.format(cal.getTime());
     }
 
 }

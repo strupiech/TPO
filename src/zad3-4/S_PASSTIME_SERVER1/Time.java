@@ -53,7 +53,7 @@ public class Time {
 
     public String getTimePassedString() {
         String timePassedString = "";
-        timePassedString += getDateToDateDetail(this.firstLocalDate, this.secondLocalDate, this.firstLocalTime, this.secondLocalTime);
+        timePassedString += "Od " + getFormattedDate(firstLocalDate, firstLocalTime) + " do " + getFormattedDate(secondLocalDate, secondLocalTime);
         timePassedString += "\n" + getDaysAndWeeksPassed(this.firstLocalDate, this.secondLocalDate);
         if (this.firstLocalTime != null && this.secondLocalTime != null) {
             ZonedDateTime firstZoned = ZonedDateTime.of(LocalDateTime.of(this.firstLocalDate, firstLocalTime), ZoneId.of("Europe/Warsaw"));
@@ -68,10 +68,6 @@ public class Time {
         return timePassedString;
     }
 
-    public String getDateToDateDetail(LocalDate firstDate, LocalDate secondDate, LocalTime firstLocalTime, LocalTime secondLocalTime) throws DateTimeParseException {
-        return "Od " + getFormattedDate(firstDate, firstLocalTime) + " do " + getFormattedDate(secondDate, secondLocalTime);
-    }
-
     public String getFormattedDate(LocalDate localDate, LocalTime localTime) {
         if (localTime != null) 
             return LocalDateTime.of(localDate, localTime).format(DateTimeFormatter.ofPattern("d MMMM yyyy (EEEE) 'godz.' HH:mm", this.locale));
@@ -81,7 +77,7 @@ public class Time {
 
     public String getDaysAndWeeksPassed(LocalDate firstLocalDate, LocalDate secondLocalDate) {
         float days = ChronoUnit.DAYS.between(firstLocalDate, secondLocalDate);
-        return String.format(new Locale("xx"), "- mija: %d dni, tygodni %d", (int) days, (int) days / 7);
+        return String.format(new Locale("xx"), "- mija: %d dni, tygodni %.2f", (int) days, days / 7);
     }
 
     public String getPassedTimeCalendar(Period period) {
