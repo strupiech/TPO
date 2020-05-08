@@ -57,4 +57,14 @@ public class ServerLog {
         return dateFormat.format(cal.getTime());
     }
 
+    public void clearClientLog(Integer clientPort) {
+        clientsLog.remove(clientPort);
+        portsClients.remove(clientPort);
+    }
+
+    public void clearServerLogIfMoreThan500Records(){
+        if (serverLog.size() < 500) return;
+
+        serverLog.subList(0, serverLog.size() - 500).clear();
+    }
 }

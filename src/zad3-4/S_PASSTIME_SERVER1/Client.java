@@ -14,11 +14,12 @@ import java.nio.charset.StandardCharsets;
 
 public class Client {
 
-    String id;
+    private static Charset REQ_RES_CHARSET = StandardCharsets.UTF_8;
+
+    private String id;
     private String host;
     private int port;
-    private SocketChannel channel = null;
-    Charset charset = StandardCharsets.UTF_8;
+    private SocketChannel serverChannel;
 
     public Client(String host, int port, String id) {
         this.host = host;
@@ -28,16 +29,9 @@ public class Client {
 
     public void connect() {
         try {
-            channel = SocketChannel.open();
-            channel.configureBlocking(false);
-            channel.connect(new InetSocketAddress(host, port));
-            while (!channel.finishConnect()) {
-                try {
-                    Thread.sleep(100);
-                } catch (Exception e) {
-                    return;
-                }
-            }
+            serverChannel = SocketChannel.open();
+            serverChannel.connect(new InetSocketAddress(host, port));
+            serverChannel.configureBlocking(false);
         } catch (IOException e) {
             System.out.println("błąd podczas laczenia sie z serwerem");
             e.printStackTrace();
@@ -45,20 +39,20 @@ public class Client {
     }
 
     public String send(String request) {
-        StringBuilder response = new StringBuilder();
-        ByteBuffer responseBuffer = ByteBuffer.allocate(1024);
-        CharBuffer charBuffer = CharBuffer.wrap(request + "\n");
+        StringBuilder responseStringBuilder = new StringBuilder();
+        ByteBuffer responseByteBuffer = ByteBuffer.allocate(1024);
+        CharBuffer outputCharBuffer = CharBuffer.wrap(request + "\n");
 
         try {
-            channel.write(charset.encode(charBuffer));
-            responseBuffer.clear();
+            serverChannel.write(REQ_RES_CHARSET.encode(outputCharBuffer));
+            responseByteBuffer.clear();
             int readBytes;
 
-            while ((readBytes = channel.read(responseBuffer)) != -1) {
+            while ((readBytes = serverChannel.read(responseByteBuffer)) != -1) {
                 if (readBytes != 0) {
-                    responseBuffer.flip();
-                    charBuffer = charset.decode(responseBuffer);
-                    response.append(charBuffer);
+                    responseByteBuffer.flip();
+                    outputCharBuffer = REQ_RES_CHARSET.decode(responseByteBuffer);
+                    responseStringBuilder.append(outputCharBuffer);
                     break;
                 }
             }
@@ -66,6 +60,10 @@ public class Client {
             e.printStackTrace();
         }
 
-        return response.toString();
+        return responseStringBuilder.toString();
+    }
+
+    public String getId() {
+        return id;
     }
 }

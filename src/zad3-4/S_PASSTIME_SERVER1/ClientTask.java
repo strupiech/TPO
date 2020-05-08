@@ -12,7 +12,7 @@ public class ClientTask extends FutureTask<String> {
     private ClientTask(Client client, List<String> requestList, boolean showResult) {
         super(() -> {
             client.connect();
-            client.send("login " + client.id);
+            client.send("login " + client.getId());
             for (String request : requestList){
                 String result = client.send(request);
                 if (showResult)

@@ -16,36 +16,44 @@ import java.util.Set;
 
 public class Server extends Thread {
 
-    private ServerSocketChannel serverChannel = null;
-    private Selector selector = null;
-    boolean isRunning = true;
+    private static Charset REQ_RES_CHARSET = StandardCharsets.UTF_8;
+
+    private ServerSocketChannel serverChannel;
+    private Selector selector;
+    private boolean isRunning;
     private ServerLog serverLog;
-    private ByteBuffer buffer;
-    Charset charset = StandardCharsets.UTF_8;
-    private StringBuilder requestString;
-    private StringBuilder responseString;
+    private String host;
+    private int port;
 
     public Server(String host, int port) {
-        try {
-            serverChannel = ServerSocketChannel.open();
-            serverChannel.configureBlocking(false);
-            serverChannel.socket().bind(new InetSocketAddress(host, port));
-
-            selector = Selector.open();
-
-            serverChannel.register(selector, SelectionKey.OP_ACCEPT);
-        } catch (IOException e) {
-            e.printStackTrace();
-            System.exit(1);
-        }
-        requestString = new StringBuilder();
-        responseString = new StringBuilder();
-        buffer = ByteBuffer.allocate(1024);
+        this.isRunning = true;
         this.serverLog = new ServerLog();
+        this.host = host;
+        this.port = port;
     }
 
     public void startServer() {
+        try {
+            serverChannel = ServerSocketChannel.open();
+            serverChannel.bind(new InetSocketAddress(host, port));
+            serverChannel.configureBlocking(false);
+
+            selector = Selector.open();
+        } catch (IOException e) {
+            printStackTraceAndSystemShutDown(e);
+        }
+
+        try {
+            serverChannel.register(selector, SelectionKey.OP_ACCEPT);
+        } catch (ClosedChannelException e) {
+            printStackTraceAndSystemShutDown(e);
+        }
         start();
+    }
+
+    private void printStackTraceAndSystemShutDown(IOException e) {
+        e.printStackTrace();
+        System.exit(1);
     }
 
     public void stopServer() {
@@ -113,6 +121,7 @@ public class Server extends Thread {
                         SocketChannel clientChannel = (SocketChannel) key.channel();
                         handleRequest(clientChannel);
                     }
+                    serverLog.clearServerLogIfMoreThan500Records();
                 }
             } catch (ClosedSelectorException ignored) {
             } catch (Exception e) {
@@ -124,25 +133,28 @@ public class Server extends Thread {
     private void handleRequest(SocketChannel clientChannel) {
         if (!clientChannel.isOpen()) return;
 
-        requestString.setLength(0);
-        buffer.clear();
+        StringBuilder requestStringBuilder = new StringBuilder();
+        ByteBuffer inputBuffer = ByteBuffer.allocate(1024);
+
+        requestStringBuilder.setLength(0);
+        inputBuffer.clear();
 
         try {
             readingLoop:
             while (true) {
-                int bytes = clientChannel.read(buffer);
+                int bytes = clientChannel.read(inputBuffer);
                 if (bytes > 0) {
-                    buffer.flip();
-                    CharBuffer charBuffer = charset.decode(buffer);
+                    inputBuffer.flip();
+                    CharBuffer charBuffer = REQ_RES_CHARSET.decode(inputBuffer);
                     while (charBuffer.hasRemaining()) {
                         char c = charBuffer.get();
                         if (c == '\r' || c == '\n') break readingLoop;
-                        requestString.append(c);
+                        requestStringBuilder.append(c);
                     }
                 }
             }
 
-            String clientRequest = requestString.toString();
+            String clientRequest = requestStringBuilder.toString();
             String[] request = clientRequest.split(" ");
             Integer clientPort = clientChannel.socket().getPort();
 
@@ -160,6 +172,8 @@ public class Server extends Thread {
                 serverLog.addToClientLog(clientPort, "logged out");
 
                 writeResponse(clientChannel, "logged out");
+                serverLog.clearClientLog(clientPort);
+
                 clientChannel.close();
                 clientChannel.socket().close();
 
@@ -169,6 +183,7 @@ public class Server extends Thread {
                 serverLog.addToClientLog(clientPort, "logged out");
 
                 writeResponse(clientChannel, serverLog.get(clientPort));
+                serverLog.clearClientLog(clientPort);
 
                 clientChannel.close();
                 clientChannel.socket().close();
@@ -188,21 +203,30 @@ public class Server extends Thread {
 
         } catch (IOException e) {
             e.printStackTrace();
-            try {
-                clientChannel.close();
-                clientChannel.socket().close();
-            } catch (Exception ex) {
-            }
+            clearClientLogAndCloseConnection(clientChannel);
+        }
+    }
+
+    private void clearClientLogAndCloseConnection(SocketChannel clientChannel) {
+        try {
+            serverLog.clearClientLog(clientChannel.socket().getPort());
+
+            clientChannel.close();
+            clientChannel.socket().close();
+        } catch (Exception ex) {
+            ex.printStackTrace();
         }
     }
 
     private void writeResponse(SocketChannel clientChannel, String message) throws IOException {
-        responseString.setLength(0);
+        StringBuilder responseStringBuilder = new StringBuilder();
+
+        responseStringBuilder.setLength(0);
 
         if (message != null)
-            responseString.append(message);
+            responseStringBuilder.append(message);
 
-        ByteBuffer wrapBuffer = charset.encode(CharBuffer.wrap(responseString));
+        ByteBuffer wrapBuffer = REQ_RES_CHARSET.encode(CharBuffer.wrap(responseStringBuilder));
         clientChannel.write(wrapBuffer);
     }
 }
