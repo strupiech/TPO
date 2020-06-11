@@ -1,0 +1,44 @@
+CREATE DATABASE BookBase;
+USE BookBase;
+
+CREATE TABLE Author(
+    IdAuthor INT,
+    Name Varchar(100),
+    Surname Varchar(100),
+    PRIMARY KEY (IdAuthor));
+
+CREATE TABLE PublishingHouse(
+    IdPublishingHouse INT,
+    Name Varchar(100),
+    PRIMARY KEY (IdPublishingHouse));
+
+CREATE TABLE Book(
+    IdBook INT,
+    Title Varchar(100),
+    IdAuthor INT,
+    IdPublishingHouse INT,
+    PRIMARY KEY (IdBook),
+    FOREIGN KEY (IdAuthor) REFERENCES Author(IdAuthor),
+    FOREIGN KEY (IdPublishingHouse) REFERENCES PublishingHouse(IdPublishingHouse));
+
+INSERT INTO Author(IdAuthor, Name, Surname) VALUES
+    (1, "Adam", "Mickiewicz"),
+    (2, "Juliusz", "Slowacki"),
+    (3, "Jan", "Brzechwa"),
+    (4, "Kamil", "Baczynski"),
+    (5, "Cyprian", "Norwid");
+
+INSERT INTO PublishingHouse(IdPublishingHouse, Name) VALUES
+    (1, "Biblioteka Narodowa"),
+    (2, "ALBUS"),
+    (3, "Pogranicze"),
+    (4, "Forma"),
+    (5, "Ex Libris");
+
+INSERT INTO Book(IdBook, Title, IdAuthor, IdPublishingHouse) VALUES
+    (1, "Pan Tadeusz", 1, 1),
+    (2, "Kaczka Dziwaczka", 3, 2),
+    (3, "Kordian", 2, 5),
+    (4, "Zamkniety Echem", 4, 3),
+    (5, "Vede-mecum", 5, 4);
+
